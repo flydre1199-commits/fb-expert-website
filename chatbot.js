@@ -169,7 +169,7 @@ Quy tắc giao tiếp bắt buộc:
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": \`Bearer \${this.API_KEY}\`
+          "Authorization": `Bearer ${this.API_KEY}`
         },
         body: JSON.stringify(payload)
       });
