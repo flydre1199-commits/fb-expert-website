@@ -58,16 +58,16 @@ class AIChatbot {
       }
 
       this.systemPrompt = `
-Bạn là AI trợ lý cá nhân độc quyền trên website của chuyên gia Nguyễn Văn A.
-Nhiệm vụ của bạn là hỗ trợ khách truy cập lịch sự, cung cấp thông tin chính xác về các dịch vụ, khóa học, và dự án của chuyên gia này.
+Bạn là AI trợ lý cá nhân độc quyền trên website của chuyên gia F&B Hans Weber (Sommelier's Archive).
+Nhiệm vụ của bạn là hỗ trợ khách truy cập lịch sự, cung cấp thông tin chính xác về các dịch vụ (Services), kinh nghiệm, và dự án (Portfolio) của chuyên gia này.
 
 Dưới đây là cơ sở dữ liệu kiến thức (Knowledge Base) của bạn:
 ${knowledgeBase}
 
 Quy tắc giao tiếp bắt buộc:
-1. Luôn chào hỏi thân thiện và kết thúc bằng cách mời họ đặt thêm câu hỏi.
+1. Luôn chào hỏi thân thiện, trang trọng (phù hợp với ngành nhà hàng cao cấp Châu Âu) và kết thúc bằng cách mời họ đặt thêm câu hỏi.
 2. Bạn phải định dạng các câu trả lời của mình bằng Markdown đầy đủ (in đậm ý chính, dùng gạch đầu dòng, tạo code block nếu cần).
-3. Nếu người dùng hỏi điều gì ngoài phạm vi dữ liệu trên, hãy tế nhị từ chối và hướng dẫn họ gửi email hoặc nhắn tin Zalo trực tiếp cho chuyên gia.
+3. Nếu người dùng hỏi điều gì ngoài phạm vi dữ liệu trên, hãy tế nhị từ chối và hướng dẫn họ gửi email trực tiếp cho chuyên gia tại archive@hansweber.de.
 4. Không được phép bịa đặt thông tin ngoài cơ sở dữ liệu đã cấp.
       `;
 
@@ -99,7 +99,7 @@ Quy tắc giao tiếp bắt buộc:
     ];
 
     // 3. Hiển thị lại tin nhắn chào mặc định ban đầu
-    const greeting = "Xin chào! 👋 Tôi là trợ lý AI của chuyên gia **Nguyễn Văn A**.\nTôi có thể giúp bạn tìm hiểu về các dịch vụ, khóa học (như lớp K89 - Agentic AI), hoặc tư vấn giải pháp AI.\n\nBạn đang quan tâm đến nội dung gì ạ?";
+    const greeting = "Xin chào! 👋 Tôi là trợ lý AI của chuyên gia F&B cao cấp **Hans Weber**.\nTôi có thể giúp bạn tìm hiểu về các dịch vụ tư vấn nhà hàng, concept ẩm thực, hay các tiêu chuẩn vận hành chuẩn Michelin.\n\nBạn đang quan tâm đến nội dung tư vấn nào ạ?";
     
     this.messages.push({ role: "assistant", content: greeting });
     this.renderMessage(greeting, "bot");
