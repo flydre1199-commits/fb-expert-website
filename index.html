@@ -86,6 +86,10 @@
             background: linear-gradient(135deg, #f2cc00 0%, #d2b100 100%);
         }
     </style>
+    <!-- Chatbot styles -->
+    <link rel="stylesheet" href="chatbot.css">
+    <!-- Marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body class="bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary">
 <!-- TopNavBar -->
@@ -349,4 +353,55 @@
 </div>
 </div>
 </footer>
+
+<!-- AI Chatbot UI -->
+<div class="chatbot-container">
+    <!-- Chatbot Floating Button -->
+    <button id="chatbotFab" class="chatbot-fab" aria-label="Mở chat">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+    </button>
+
+    <!-- Chat Window -->
+    <div id="chatWindow" class="chat-window">
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="chat-title-group">
+                <div class="online-indicator"></div>
+                <div class="chat-title">Trợ lý AI</div>
+            </div>
+            <div class="chat-actions">
+                <button id="chatRefreshBtn" class="icon-btn" aria-label="Làm mới">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+                <button id="chatCloseBtn" class="icon-btn" aria-label="Đóng chat">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div id="chatBody" class="chat-body">
+            <!-- Messages will be injected here -->
+        </div>
+
+        <!-- Footer -->
+        <div class="chat-footer">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Nhập tin nhắn..." autocomplete="off">
+            <button id="sendBtn" class="send-btn" aria-label="Gửi tin nhắn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transform: rotate(90deg)">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+<!-- Chatbot Logic -->
+<script src="chatbot.js"></script>
+
 </body></html>
