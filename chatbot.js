@@ -1,8 +1,8 @@
 class AIChatbot {
   constructor() {
-    this.API_KEY = "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";
-    this.API_URL = "https://openrouter.ai/api/v1/chat/completions";
-    this.MODEL_NAME = "z-ai/glm-4.5-air:free";
+    this.API_KEY = "sk-4bd27113b7dc78d1-lh6jld-f4f9c69f";
+    this.API_URL = "https://9router.vuhai.io.vn/v1/chat/completions";
+    this.MODEL_NAME = "ces-chatbot-gpt-5.4";
     
     this.systemPrompt = "";
     this.messages = [];
