@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('CSS') ?>
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="logo">
+        <span class="logo-icon">📦</span>
+        <h1>Quản Lý Đơn Hàng</h1>
+      </div>
+      <p class="header-subtitle">Hệ thống quản lý đơn hàng trực tuyến</p>
+    </div>
+  </header>
+
+  <!-- ===== TAB NAVIGATION ===== -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('customers')" id="tab-customers">
+      <span class="tab-icon">👥</span> Khách Hàng
+    </button>
+    <button class="tab-btn" onclick="switchTab('products')" id="tab-products">
+      <span class="tab-icon">📦</span> Sản Phẩm
+    </button>
+    <button class="tab-btn" onclick="switchTab('orders')" id="tab-orders">
+      <span class="tab-icon">🧾</span> Đơn Hàng
+    </button>
+  </nav>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main-content">
+
+    <!-- ========== CUSTOMERS TAB ========== -->
+    <div id="panel-customers" class="tab-panel active">
+      <div class="panel-header">
+        <h2>Danh Sách Khách Hàng</h2>
+        <button class="btn btn-primary" onclick="showCustomerForm()">
+          <span>+</span> Thêm Khách Hàng
+        </button>
+      </div>
+      <div class="table-wrapper">
+        <table id="customers-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tên Khách Hàng</th>
+              <th>Số Điện Thoại</th>
+              <th>Hạng Thành Viên</th>
+              <th>Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="customers-body">
+            <tr><td colspan="5" class="loading-row">Đang tải dữ liệu...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== PRODUCTS TAB ========== -->
+    <div id="panel-products" class="tab-panel">
+      <div class="panel-header">
+        <h2>Danh Sách Sản Phẩm</h2>
+        <button class="btn btn-primary" onclick="showProductForm()">
+          <span>+</span> Thêm Sản Phẩm
+        </button>
+      </div>
+      <div class="table-wrapper">
+        <table id="products-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tên Sản Phẩm</th>
+              <th>Giá</th>
+              <th>Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="products-body">
+            <tr><td colspan="4" class="loading-row">Đang tải dữ liệu...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ========== ORDERS TAB ========== -->
+    <div id="panel-orders" class="tab-panel">
+      <div class="panel-header">
+        <h2>Danh Sách Đơn Hàng</h2>
+        <button class="btn btn-primary" onclick="showOrderForm()">
+          <span>+</span> Tạo Đơn Hàng
+        </button>
+      </div>
+      <div class="table-wrapper">
+        <table id="orders-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Khách Hàng</th>
+              <th>Sản Phẩm</th>
+              <th>Số Lượng</th>
+              <th>Tổng Tiền</th>
+              <th>Trạng Thái</th>
+              <th>Ngày Tạo</th>
+            </tr>
+          </thead>
+          <tbody id="orders-body">
+            <tr><td colspan="7" class="loading-row">Đang tải dữ liệu...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== MODAL: CUSTOMER FORM ===== -->
+  <div id="modal-customer" class="modal-overlay" onclick="closeModalOnOverlay(event, 'modal-customer')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="customer-form-title">Thêm Khách Hàng</h3>
+        <button class="modal-close" onclick="closeModal('modal-customer')">&times;</button>
+      </div>
+      <form id="customer-form" onsubmit="submitCustomerForm(event)">
+        <input type="hidden" id="customer-id">
+        <div class="form-group">
+          <label for="customer-name">Tên Khách Hàng <span class="required">*</span></label>
+          <input type="text" id="customer-name" required placeholder="Nhập tên khách hàng">
+        </div>
+        <div class="form-group">
+          <label for="customer-phone">Số Điện Thoại <span class="required">*</span></label>
+          <input type="text" id="customer-phone" required placeholder="Nhập số điện thoại">
+        </div>
+        <div class="form-group">
+          <label for="customer-level">Hạng Thành Viên</label>
+          <select id="customer-level">
+            <option value="Thường">Thường</option>
+            <option value="Bạc">Bạc</option>
+            <option value="Vàng">Vàng</option>
+            <option value="Kim cương">Kim cương</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-customer')">Hủy</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-customer">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: PRODUCT FORM ===== -->
+  <div id="modal-product" class="modal-overlay" onclick="closeModalOnOverlay(event, 'modal-product')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="product-form-title">Thêm Sản Phẩm</h3>
+        <button class="modal-close" onclick="closeModal('modal-product')">&times;</button>
+      </div>
+      <form id="product-form" onsubmit="submitProductForm(event)">
+        <input type="hidden" id="product-id">
+        <div class="form-group">
+          <label for="product-name">Tên Sản Phẩm <span class="required">*</span></label>
+          <input type="text" id="product-name" required placeholder="Nhập tên sản phẩm">
+        </div>
+        <div class="form-group">
+          <label for="product-price">Giá (VNĐ) <span class="required">*</span></label>
+          <input type="number" id="product-price" required min="0" step="1000" placeholder="Nhập giá sản phẩm">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-product')">Hủy</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-product">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== MODAL: ORDER FORM ===== -->
+  <div id="modal-order" class="modal-overlay" onclick="closeModalOnOverlay(event, 'modal-order')">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Tạo Đơn Hàng Mới</h3>
+        <button class="modal-close" onclick="closeModal('modal-order')">&times;</button>
+      </div>
+      <form id="order-form" onsubmit="submitOrderForm(event)">
+        <div class="form-group">
+          <label for="order-customer">Khách Hàng <span class="required">*</span></label>
+          <select id="order-customer" required>
+            <option value="">-- Chọn khách hàng --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="order-product">Sản Phẩm <span class="required">*</span></label>
+          <select id="order-product" required onchange="calculateTotal()">
+            <option value="">-- Chọn sản phẩm --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="order-quantity">Số Lượng <span class="required">*</span></label>
+          <input type="number" id="order-quantity" required min="1" value="1" onchange="calculateTotal()" oninput="calculateTotal()">
+        </div>
+        <div class="form-group">
+          <label>Tổng Tiền (Tự động tính)</label>
+          <div class="total-display" id="order-total-display">0 VNĐ</div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-order')">Hủy</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-order">Tạo Đơn Hàng</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===== TOAST NOTIFICATION ===== -->
+  <div id="toast-container"></div>
+
+  <!-- ===== LOADING OVERLAY ===== -->
+  <div id="loading-overlay" class="loading-overlay" style="display:none;">
+    <div class="spinner"></div>
+    <p>Đang xử lý...</p>
+  </div>
+
+  <?!= include('JavaScript') ?>
+</body>
+</html>
