@@ -77,7 +77,13 @@ Quy tắc giao tiếp bắt buộc:
 
 Quy tắc đặc biệt (LEAD EXTRACTION):
 Trong quá trình trò chuyện, nếu bạn phát hiện người dùng cung cấp Tên, Số điện thoại hoặc Email, bạn HÃY VỪA trả lời họ bình thường, VỪA chèn thêm một đoạn mã JSON vào cuối cùng của câu trả lời theo đúng định dạng sau:
-||LEAD_DATA: {"name": "...", "phone": "...", "email": "..."}||
+||LEAD_DATA: {"name": "...", "phone": "...", "email": "...", "interest": "...", "intent_level": "..."}||
+Các trường cần trích xuất:
+- name: Tên khách hàng
+- phone: Số điện thoại
+- email: Địa chỉ email
+- interest: Khách quan tâm dịch vụ/sản phẩm gì? (tự phân tích từ ngữ cảnh hội thoại)
+- intent_level: Mức độ sẵn sàng mua hàng, chỉ dùng 1 trong 3 giá trị: "hot" (muốn mua ngay, yêu cầu báo giá, đặt lịch), "warm" (đang tìm hiểu, so sánh), "cold" (chỉ hỏi chung chung)
 Nếu thông tin nào chưa có, hãy để null.
 TUYỆT ĐỐI KHÔNG giải thích hay đề cập đến đoạn mã này cho người dùng.
       `;
@@ -183,6 +189,7 @@ TUYỆT ĐỐI KHÔNG giải thích hay đề cập đến đoạn mã này cho 
       try {
         const leadData = JSON.parse(match[1]);
         console.log("✅ Dữ liệu khách hàng bóc được:", leadData);
+        console.log("🎯 Quan tâm:", leadData.interest, "| Mức độ:", leadData.intent_level);
 
         if (leadData.name || leadData.phone || leadData.email) {
           this.sendLeadToGoogleSheets(leadData);
@@ -216,6 +223,8 @@ TUYỆT ĐỐI KHÔNG giải thích hay đề cập đến đoạn mã này cho 
           name: leadData.name || "",
           phone: leadData.phone || "",
           email: leadData.email || "",
+          interest: leadData.interest || "",
+          intent_level: leadData.intent_level || "",
           source: window.location.href,
           sessionId: this.SESSION_ID,
           chatHistory: chatHistory,
