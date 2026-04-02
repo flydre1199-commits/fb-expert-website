@@ -5,7 +5,7 @@ class AIChatbot {
     this.MODEL_NAME = "ces-chatbot-gpt-5.4";
 
     // Google Sheets Lead Capture Config
-    this.GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2VviIgkjpCauoxCixSIF8_uc7w0Ty-8_X7hUkzFIuaRYpTyo41rXddj4pCfphyntmUg/exec';
+    this.GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_7ibBry0lbm1z1AjkDMi62GCBN-qZewS1gFjCr11io0Om2eov5gQ2jjPgFRJDqlbqqA/exec';
     this.SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
     this.LEAD_PATTERN = /\|\|LEAD_DATA:\s*(\{.*?\})\s*\|\|/;
     
