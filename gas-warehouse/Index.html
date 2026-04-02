@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi" data-bs-theme="dark">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <?!= include('CSS') ?>
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="login-screen" class="login-wrapper">
+  <div class="login-card">
+    <div class="login-header">
+      <i class="fas fa-warehouse login-icon"></i>
+      <h2>Quản Lý Kho Hàng</h2>
+      <p>Đăng nhập để tiếp tục</p>
+    </div>
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div class="mb-3">
+        <label class="form-label"><i class="fas fa-envelope me-1"></i>Email</label>
+        <input type="email" class="form-control" id="login-email" required placeholder="Nhập email">
+      </div>
+      <div class="mb-3">
+        <label class="form-label"><i class="fas fa-lock me-1"></i>Mật khẩu</label>
+        <input type="password" class="form-control" id="login-password" required placeholder="Nhập mật khẩu">
+      </div>
+      <div id="login-error" class="alert alert-danger d-none"></div>
+      <button type="submit" class="btn btn-primary w-100 btn-login" id="btn-login">
+        <i class="fas fa-sign-in-alt me-1"></i> Đăng nhập
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== ACCESS DENIED ===== -->
+<div id="access-denied" class="login-wrapper" style="display:none">
+  <div class="login-card text-center">
+    <i class="fas fa-ban" style="font-size:64px;color:#e74c3c;margin-bottom:16px"></i>
+    <h3>Truy cập bị từ chối</h3>
+    <p id="denied-message" class="text-muted"></p>
+    <button class="btn btn-outline-light mt-3" onclick="doLogout()">Đăng nhập lại</button>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="main-app" style="display:none">
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-dark app-navbar">
+    <div class="container-fluid">
+      <a class="navbar-brand"><i class="fas fa-warehouse me-2"></i>Quản Lý Kho</a>
+      <div class="d-flex align-items-center gap-3">
+        <span class="navbar-text" id="user-display"></span>
+        <button class="btn btn-outline-light btn-sm" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Thoát</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- TAB NAV -->
+  <div class="container-fluid mt-3">
+    <ul class="nav nav-pills nav-tabs-custom mb-3" id="mainTabs">
+      <li class="nav-item"><a class="nav-link active" href="#" onclick="switchTab('dashboard',this)"><i class="fas fa-chart-pie me-1"></i>Tổng quan</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" onclick="switchTab('products',this)"><i class="fas fa-boxes-stacked me-1"></i>Sản phẩm</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" onclick="switchTab('transactions',this)"><i class="fas fa-exchange-alt me-1"></i>Nhập/Xuất kho</a></li>
+      <li class="nav-item"><a class="nav-link" href="#" onclick="switchTab('alerts',this)"><i class="fas fa-bell me-1"></i>Cảnh báo</a></li>
+      <li class="nav-item" id="nav-suppliers"><a class="nav-link" href="#" onclick="switchTab('suppliers',this)"><i class="fas fa-truck me-1"></i>Nhà cung cấp</a></li>
+      <li class="nav-item" id="nav-users"><a class="nav-link" href="#" onclick="switchTab('users',this)"><i class="fas fa-users-cog me-1"></i>Quản lý Users</a></li>
+    </ul>
+  </div>
+
+  <!-- TAB PANELS -->
+  <div class="container-fluid pb-5">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="panel-dashboard" class="tab-panel active">
+      <div class="row g-3 mb-4" id="summary-cards">
+        <div class="col-md-3"><div class="summary-card card-blue"><div class="sc-icon"><i class="fas fa-box"></i></div><div class="sc-info"><h4 id="card-total-products">0</h4><p>Tổng sản phẩm</p></div></div></div>
+        <div class="col-md-3"><div class="summary-card card-green"><div class="sc-icon"><i class="fas fa-exchange-alt"></i></div><div class="sc-info"><h4 id="card-monthly-tx">0</h4><p>Giao dịch tháng này</p></div></div></div>
+        <div class="col-md-3"><div class="summary-card card-red"><div class="sc-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="sc-info"><h4 id="card-low-stock">0</h4><p>Sắp hết hàng</p></div></div></div>
+        <div class="col-md-3"><div class="summary-card card-purple"><div class="sc-icon"><i class="fas fa-coins"></i></div><div class="sc-info"><h4 id="card-total-value">0</h4><p>Giá trị tồn kho</p></div></div></div>
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6"><div class="chart-card"><h6><i class="fas fa-chart-pie me-2"></i>Tồn kho theo danh mục</h6><div id="pie-chart" style="height:350px"></div></div></div>
+        <div class="col-md-6"><div class="chart-card"><h6><i class="fas fa-chart-bar me-2"></i>Top 5 tồn kho nhiều nhất</h6><div id="bar-chart" style="height:350px"></div></div></div>
+      </div>
+    </div>
+
+    <!-- ===== PRODUCTS ===== -->
+    <div id="panel-products" class="tab-panel" style="display:none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Danh sách sản phẩm</h5>
+        <button class="btn btn-primary admin-only" onclick="showProductForm()"><i class="fas fa-plus me-1"></i>Thêm SP</button>
+      </div>
+      <div class="table-responsive"><table class="table table-hover table-dark-custom"><thead><tr>
+        <th>Mã SP</th><th>Tên sản phẩm</th><th>Danh mục</th><th>NCC</th><th>ĐVT</th><th>Đơn giá</th><th>Tồn kho</th><th>Min</th><th>Trạng thái</th><th class="admin-only">Thao tác</th>
+      </tr></thead><tbody id="products-body"><tr><td colspan="10" class="text-center text-muted">Đang tải...</td></tr></tbody></table></div>
+    </div>
+
+    <!-- ===== TRANSACTIONS ===== -->
+    <div id="panel-transactions" class="tab-panel" style="display:none">
+      <div class="row g-4">
+        <div class="col-lg-4 staff-only">
+          <div class="form-card">
+            <h5 class="mb-3"><i class="fas fa-file-invoice me-2"></i>Tạo phiếu Nhập/Xuất</h5>
+            <form id="trans-form" onsubmit="submitTransForm(event)">
+              <div class="mb-3">
+                <label class="form-label">Loại phiếu *</label>
+                <select class="form-select" id="trans-type" required onchange="onTransTypeChange()">
+                  <option value="">-- Chọn --</option><option value="Nhập">Nhập kho</option><option value="Xuất">Xuất kho</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Sản phẩm *</label>
+                <select class="form-select" id="trans-product" required onchange="onTransProductChange()"><option value="">-- Chọn SP --</option></select>
+                <small class="text-muted" id="trans-stock-info"></small>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Số lượng *</label>
+                <input type="number" class="form-control" id="trans-qty" required min="1" value="1">
+              </div>
+              <div class="mb-3" id="trans-supplier-group" style="display:none">
+                <label class="form-label">Nhà cung cấp *</label>
+                <select class="form-select" id="trans-supplier"><option value="">-- Chọn NCC --</option></select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Ghi chú</label>
+                <textarea class="form-control" id="trans-note" rows="2" placeholder="Ghi chú..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i>Lưu phiếu</button>
+            </form>
+          </div>
+        </div>
+        <div class="col-lg-8">
+          <h5 class="mb-3"><i class="fas fa-history me-2"></i>Lịch sử giao dịch (20 gần nhất)</h5>
+          <div class="table-responsive"><table class="table table-hover table-dark-custom"><thead><tr>
+            <th>Mã GD</th><th>Sản phẩm</th><th>Loại</th><th>SL</th><th>NCC</th><th>Ghi chú</th><th>Người tạo</th><th>Ngày</th>
+          </tr></thead><tbody id="trans-body"><tr><td colspan="8" class="text-center text-muted">Đang tải...</td></tr></tbody></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ALERTS ===== -->
+    <div id="panel-alerts" class="tab-panel" style="display:none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><i class="fas fa-bell text-warning me-2"></i>Sản phẩm tồn kho thấp (≤ Min_Stock)</h5>
+        <button class="btn btn-danger staff-only" onclick="sendAlert()"><i class="fas fa-paper-plane me-1"></i>Gửi cảnh báo ngay</button>
+      </div>
+      <div class="table-responsive"><table class="table table-hover table-dark-custom"><thead><tr>
+        <th>Mã SP</th><th>Tên SP</th><th>Tồn kho</th><th>Min Stock</th><th>NCC</th><th>SĐT NCC</th>
+      </tr></thead><tbody id="alerts-body"><tr><td colspan="6" class="text-center text-muted">Đang tải...</td></tr></tbody></table></div>
+    </div>
+
+    <!-- ===== SUPPLIERS ===== -->
+    <div id="panel-suppliers" class="tab-panel" style="display:none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Quản lý Nhà cung cấp</h5>
+        <button class="btn btn-primary" onclick="showSupplierForm()"><i class="fas fa-plus me-1"></i>Thêm NCC</button>
+      </div>
+      <div class="table-responsive"><table class="table table-hover table-dark-custom"><thead><tr>
+        <th>Mã NCC</th><th>Tên NCC</th><th>Người liên hệ</th><th>SĐT</th><th>Email</th><th>Địa chỉ</th><th>Thao tác</th>
+      </tr></thead><tbody id="suppliers-body"><tr><td colspan="7" class="text-center text-muted">Đang tải...</td></tr></tbody></table></div>
+    </div>
+
+    <!-- ===== USERS ===== -->
+    <div id="panel-users" class="tab-panel" style="display:none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><i class="fas fa-users-cog me-2"></i>Quản lý người dùng</h5>
+        <button class="btn btn-primary" onclick="showUserForm()"><i class="fas fa-plus me-1"></i>Thêm User</button>
+      </div>
+      <div class="table-responsive"><table class="table table-hover table-dark-custom"><thead><tr>
+        <th>User ID</th><th>Email</th><th>Họ tên</th><th>Role</th><th>Trạng thái</th><th>Thao tác</th>
+      </tr></thead><tbody id="users-body"><tr><td colspan="6" class="text-center text-muted">Đang tải...</td></tr></tbody></table></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== MODAL: PRODUCT ===== -->
+<div class="modal fade" id="modal-product" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark">
+  <div class="modal-header"><h5 class="modal-title" id="product-modal-title">Thêm sản phẩm</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <form id="product-form" onsubmit="submitProductForm(event)"><div class="modal-body">
+    <input type="hidden" id="p-id">
+    <div class="mb-3"><label class="form-label">Tên SP *</label><input type="text" class="form-control" id="p-name" required></div>
+    <div class="row"><div class="col-6 mb-3"><label class="form-label">Danh mục *</label><select class="form-select" id="p-cat" required></select></div>
+    <div class="col-6 mb-3"><label class="form-label">NCC *</label><select class="form-select" id="p-sup" required></select></div></div>
+    <div class="row"><div class="col-4 mb-3"><label class="form-label">ĐVT *</label><input type="text" class="form-control" id="p-unit" required placeholder="Cái, Ram..."></div>
+    <div class="col-4 mb-3"><label class="form-label">Đơn giá *</label><input type="number" class="form-control" id="p-price" required min="0"></div>
+    <div class="col-4 mb-3"><label class="form-label">Min Stock *</label><input type="number" class="form-control" id="p-min" required min="0"></div></div>
+  </div><div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+    <button type="submit" class="btn btn-primary">Lưu</button>
+  </div></form>
+</div></div></div>
+
+<!-- ===== MODAL: SUPPLIER ===== -->
+<div class="modal fade" id="modal-supplier" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark">
+  <div class="modal-header"><h5 class="modal-title" id="supplier-modal-title">Thêm NCC</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <form id="supplier-form" onsubmit="submitSupplierForm(event)"><div class="modal-body">
+    <input type="hidden" id="s-id">
+    <div class="mb-3"><label class="form-label">Tên NCC *</label><input type="text" class="form-control" id="s-name" required></div>
+    <div class="row"><div class="col-6 mb-3"><label class="form-label">Người liên hệ</label><input type="text" class="form-control" id="s-contact"></div>
+    <div class="col-6 mb-3"><label class="form-label">SĐT</label><input type="text" class="form-control" id="s-phone"></div></div>
+    <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" id="s-email"></div>
+    <div class="mb-3"><label class="form-label">Địa chỉ</label><input type="text" class="form-control" id="s-address"></div>
+  </div><div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+    <button type="submit" class="btn btn-primary">Lưu</button>
+  </div></form>
+</div></div></div>
+
+<!-- ===== MODAL: USER ===== -->
+<div class="modal fade" id="modal-user" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark">
+  <div class="modal-header"><h5 class="modal-title" id="user-modal-title">Thêm User</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+  <form id="user-form" onsubmit="submitUserForm(event)"><div class="modal-body">
+    <input type="hidden" id="u-id">
+    <div class="mb-3"><label class="form-label">Email *</label><input type="email" class="form-control" id="u-email" required></div>
+    <div class="mb-3"><label class="form-label">Họ tên *</label><input type="text" class="form-control" id="u-fullname" required></div>
+    <div class="mb-3"><label class="form-label">Mật khẩu</label><input type="text" class="form-control" id="u-password" value="123456"></div>
+    <div class="row"><div class="col-6 mb-3"><label class="form-label">Role *</label>
+      <select class="form-select" id="u-role" required><option value="admin">Admin</option><option value="warehouse_staff">Nhân viên kho</option><option value="viewer">Viewer</option></select></div>
+    <div class="col-6 mb-3"><label class="form-label">Trạng thái</label>
+      <select class="form-select" id="u-active"><option value="true">Active</option><option value="false">Inactive</option></select></div></div>
+  </div><div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+    <button type="submit" class="btn btn-primary">Lưu</button>
+  </div></form>
+</div></div></div>
+
+<!-- TOAST -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index:9999" id="toast-wrap">
+  <div id="app-toast" class="toast align-items-center border-0" role="alert">
+    <div class="d-flex"><div class="toast-body" id="toast-msg"></div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-overlay" style="display:none" class="loading-overlay">
+  <div class="spinner-border text-primary" style="width:3rem;height:3rem"></div>
+  <p class="mt-2 text-muted">Đang xử lý...</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<?!= include('JavaScript') ?>
+</body>
+</html>
