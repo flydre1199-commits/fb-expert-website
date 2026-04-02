@@ -1,0 +1,413 @@
+<script>
+// ==================== GLOBAL STATE ====================
+var currentUser = null;
+var cachedProducts = [];
+var cachedCategories = [];
+var cachedSuppliers = [];
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', function() {
+  google.charts.load('current', { packages: ['corechart'] });
+  var saved = localStorage.getItem('wh_user');
+  if (saved) {
+    try {
+      var user = JSON.parse(saved);
+      // Re-validate user is still active
+      google.script.run.withSuccessHandler(function(result) {
+        if (result && !result.error) {
+          onLoginSuccess(result);
+        } else {
+          localStorage.removeItem('wh_user');
+          showLogin();
+        }
+      }).withFailureHandler(function() {
+        localStorage.removeItem('wh_user');
+        showLogin();
+      }).checkLogin(user.email, user._pw);
+    } catch (e) { showLogin(); }
+  } else {
+    showLogin();
+  }
+});
+
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('access-denied').style.display = 'none';
+}
+
+// ==================== AUTH ====================
+function handleLogin(e) {
+  e.preventDefault();
+  var email = document.getElementById('login-email').value.trim();
+  var pw = document.getElementById('login-password').value;
+  var errDiv = document.getElementById('login-error');
+  errDiv.classList.add('d-none');
+  document.getElementById('btn-login').disabled = true;
+  document.getElementById('btn-login').innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang xác thực...';
+
+  google.script.run.withSuccessHandler(function(result) {
+    document.getElementById('btn-login').disabled = false;
+    document.getElementById('btn-login').innerHTML = '<i class="fas fa-sign-in-alt me-1"></i> Đăng nhập';
+    if (result.error) {
+      errDiv.textContent = result.message;
+      errDiv.classList.remove('d-none');
+      return;
+    }
+    result._pw = pw;
+    localStorage.setItem('wh_user', JSON.stringify(result));
+    onLoginSuccess(result);
+  }).withFailureHandler(function(err) {
+    document.getElementById('btn-login').disabled = false;
+    document.getElementById('btn-login').innerHTML = '<i class="fas fa-sign-in-alt me-1"></i> Đăng nhập';
+    errDiv.textContent = 'Lỗi: ' + err.message;
+    errDiv.classList.remove('d-none');
+  }).checkLogin(email, pw);
+}
+
+function onLoginSuccess(user) {
+  currentUser = user;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  document.getElementById('user-display').innerHTML = '<i class="fas fa-user me-1"></i>' + esc(user.fullName) + ' <span class="badge bg-secondary">' + user.role + '</span>';
+  applyPermissions(user.role);
+  loadDashboard();
+  loadCategoriesAndSuppliers();
+}
+
+function doLogout() {
+  localStorage.removeItem('wh_user');
+  currentUser = null;
+  location.reload();
+}
+
+function applyPermissions(role) {
+  if (role !== 'admin') {
+    document.getElementById('nav-suppliers').style.display = 'none';
+    document.getElementById('nav-users').style.display = 'none';
+    document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = 'none'; });
+  }
+  if (role === 'viewer') {
+    document.querySelectorAll('.staff-only').forEach(function(el) { el.style.display = 'none'; });
+  }
+}
+
+// ==================== HELPERS ====================
+function esc(t) { if (!t) return ''; var d = document.createElement('div'); d.appendChild(document.createTextNode(t)); return d.innerHTML; }
+function fmt(n) { return new Intl.NumberFormat('vi-VN').format(n); }
+function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
+function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+function showToast(msg, type) {
+  type = type || 'info';
+  var t = document.getElementById('app-toast');
+  t.className = 'toast align-items-center border-0 toast-' + type;
+  document.getElementById('toast-msg').textContent = msg;
+  new bootstrap.Toast(t, { delay: 3500 }).show();
+}
+
+function getModal(id) { return bootstrap.Modal.getOrCreateInstance(document.getElementById(id)); }
+
+// ==================== TAB SWITCHING ====================
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.style.display = 'none'; });
+  document.querySelectorAll('.nav-tabs-custom .nav-link').forEach(function(a) { a.classList.remove('active'); });
+  document.getElementById('panel-' + name).style.display = 'block';
+  if (el) el.classList.add('active');
+
+  if (name === 'dashboard') loadDashboard();
+  else if (name === 'products') loadProducts();
+  else if (name === 'transactions') loadTransactions();
+  else if (name === 'alerts') loadAlerts();
+  else if (name === 'suppliers') loadSuppliers();
+  else if (name === 'users') loadUsers();
+}
+
+// ==================== LOAD DROPDOWNS ====================
+function loadCategoriesAndSuppliers() {
+  google.script.run.withSuccessHandler(function(cats) { cachedCategories = cats; }).getCategories(currentUser.email);
+  google.script.run.withSuccessHandler(function(sups) { cachedSuppliers = sups; }).getSuppliers(currentUser.email);
+}
+
+function populateCatDropdown(selectId, selectedId) {
+  var s = document.getElementById(selectId);
+  s.innerHTML = '<option value="">-- Chọn danh mục --</option>';
+  cachedCategories.forEach(function(c) {
+    s.innerHTML += '<option value="' + esc(c.id) + '"' + (c.id === selectedId ? ' selected' : '') + '>' + esc(c.name) + '</option>';
+  });
+}
+
+function populateSupDropdown(selectId, selectedId) {
+  var s = document.getElementById(selectId);
+  s.innerHTML = '<option value="">-- Chọn NCC --</option>';
+  cachedSuppliers.forEach(function(c) {
+    s.innerHTML += '<option value="' + esc(c.id) + '"' + (c.id === selectedId ? ' selected' : '') + '>' + esc(c.name) + '</option>';
+  });
+}
+
+// ==================== DASHBOARD ====================
+function loadDashboard() {
+  google.script.run.withSuccessHandler(function(d) {
+    document.getElementById('card-total-products').textContent = d.totalProducts;
+    document.getElementById('card-monthly-tx').textContent = d.monthlyTx;
+    document.getElementById('card-low-stock').textContent = d.lowStock;
+    document.getElementById('card-total-value').textContent = fmt(d.totalValue);
+    google.charts.setOnLoadCallback(function() { drawCharts(d); });
+  }).withFailureHandler(function(e) { showToast('Lỗi tải dashboard: ' + e.message, 'error'); }).getDashboardData(currentUser.email);
+}
+
+function drawCharts(d) {
+  if (d.pieData.length > 1) {
+    new google.visualization.PieChart(document.getElementById('pie-chart')).draw(
+      google.visualization.arrayToDataTable(d.pieData),
+      { backgroundColor: 'transparent', legend: { textStyle: { color: '#c9d1d9', fontSize: 12 } }, pieSliceTextStyle: { color: '#fff' }, chartArea: { width: '90%', height: '80%' }, colors: ['#58a6ff', '#2ecc71', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c'] }
+    );
+  } else {
+    document.getElementById('pie-chart').innerHTML = '<p class="text-center text-muted mt-5">Chưa có dữ liệu</p>';
+  }
+  if (d.barData.length > 1) {
+    new google.visualization.BarChart(document.getElementById('bar-chart')).draw(
+      google.visualization.arrayToDataTable(d.barData),
+      { backgroundColor: 'transparent', legend: { position: 'none' }, hAxis: { textStyle: { color: '#c9d1d9' }, gridlines: { color: 'rgba(255,255,255,0.05)' } }, vAxis: { textStyle: { color: '#c9d1d9' } }, chartArea: { width: '65%', height: '75%' }, colors: ['#58a6ff'], bar: { groupWidth: '60%' } }
+    );
+  } else {
+    document.getElementById('bar-chart').innerHTML = '<p class="text-center text-muted mt-5">Chưa có dữ liệu</p>';
+  }
+}
+
+// ==================== PRODUCTS ====================
+function loadProducts() {
+  google.script.run.withSuccessHandler(function(products) {
+    cachedProducts = products;
+    renderProducts(products);
+  }).withFailureHandler(function(e) { showToast('Lỗi: ' + e.message, 'error'); }).getProducts(currentUser.email);
+}
+
+function renderProducts(list) {
+  var tb = document.getElementById('products-body');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Chưa có sản phẩm</td></tr>'; return; }
+  var h = '';
+  list.forEach(function(p) {
+    var statusBadge = p.status === 'good' ? '<span class="badge badge-good">🟢 Đủ hàng</span>' : p.status === 'warning' ? '<span class="badge badge-warning">🟡 Sắp hết</span>' : '<span class="badge badge-critical">🔴 Hết hàng</span>';
+    var stockClass = p.status === 'good' ? 'stock-good' : p.status === 'warning' ? 'stock-warning' : 'stock-critical';
+    h += '<tr><td><code>' + esc(p.id) + '</code></td><td>' + esc(p.name) + '</td><td>' + esc(p.catName) + '</td><td>' + esc(p.supplierName) + '</td><td>' + esc(p.unit) + '</td><td class="price-col">' + fmt(p.unitPrice) + '</td><td class="' + stockClass + '">' + p.currentStock + '</td><td>' + p.minStock + '</td><td>' + statusBadge + '</td>';
+    h += '<td class="admin-only"><button class="btn btn-sm btn-outline-info me-1" onclick="editProduct(\'' + p.id + '\')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="delProduct(\'' + p.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+  });
+  tb.innerHTML = h;
+  if (currentUser.role !== 'admin') { document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = 'none'; }); }
+}
+
+function showProductForm(data) {
+  document.getElementById('product-form').reset();
+  document.getElementById('p-id').value = '';
+  populateCatDropdown('p-cat', data ? data.catId : '');
+  populateSupDropdown('p-sup', data ? data.supplierId : '');
+  if (data) {
+    document.getElementById('product-modal-title').textContent = 'Sửa sản phẩm';
+    document.getElementById('p-id').value = data.id;
+    document.getElementById('p-name').value = data.name;
+    document.getElementById('p-unit').value = data.unit;
+    document.getElementById('p-price').value = data.unitPrice;
+    document.getElementById('p-min').value = data.minStock;
+  } else {
+    document.getElementById('product-modal-title').textContent = 'Thêm sản phẩm';
+  }
+  getModal('modal-product').show();
+}
+
+function editProduct(id) {
+  var p = cachedProducts.find(function(x) { return x.id === id; });
+  if (p) showProductForm(p);
+}
+
+function submitProductForm(e) {
+  e.preventDefault();
+  showLoading();
+  var d = { id: document.getElementById('p-id').value, name: document.getElementById('p-name').value.trim(), catId: document.getElementById('p-cat').value, supplierId: document.getElementById('p-sup').value, unit: document.getElementById('p-unit').value.trim(), unitPrice: document.getElementById('p-price').value, minStock: document.getElementById('p-min').value };
+  var fn = d.id ? 'updateProduct' : 'addProduct';
+  google.script.run.withSuccessHandler(function(r) { hideLoading(); getModal('modal-product').hide(); showToast(r.message, 'success'); loadProducts(); }).withFailureHandler(function(err) { hideLoading(); showToast(err.message, 'error'); })[fn](d, currentUser.email);
+}
+
+function delProduct(id) {
+  if (!confirm('Xác nhận xóa sản phẩm này?')) return;
+  showLoading();
+  google.script.run.withSuccessHandler(function(r) { hideLoading(); showToast(r.message, 'success'); loadProducts(); }).withFailureHandler(function(err) { hideLoading(); showToast(err.message, 'error'); }).deleteProduct(id, currentUser.email);
+}
+
+// ==================== TRANSACTIONS ====================
+function loadTransactions() {
+  // Populate dropdowns
+  var ps = document.getElementById('trans-product');
+  ps.innerHTML = '<option value="">-- Chọn SP --</option>';
+  cachedProducts.forEach(function(p) { ps.innerHTML += '<option value="' + esc(p.id) + '" data-stock="' + p.currentStock + '" data-unit="' + esc(p.unit) + '">' + esc(p.name) + ' (' + esc(p.unit) + ')</option>'; });
+  populateSupDropdown('trans-supplier', '');
+
+  google.script.run.withSuccessHandler(function(list) { renderTransactions(list); }).withFailureHandler(function(e) { showToast('Lỗi: ' + e.message, 'error'); }).getTransactions(currentUser.email);
+}
+
+function renderTransactions(list) {
+  var tb = document.getElementById('trans-body');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Chưa có giao dịch</td></tr>'; return; }
+  var h = '';
+  list.forEach(function(t) {
+    var typeBadge = t.type === 'Nhập' ? '<span class="badge badge-nhap">↓ Nhập</span>' : '<span class="badge badge-xuat">↑ Xuất</span>';
+    h += '<tr><td><code>' + esc(t.transId) + '</code></td><td>' + esc(t.productName) + '</td><td>' + typeBadge + '</td><td>' + t.quantity + '</td><td>' + esc(t.supplierId) + '</td><td>' + esc(t.note) + '</td><td>' + esc(t.createdBy) + '</td><td>' + esc(t.createdAt) + '</td></tr>';
+  });
+  tb.innerHTML = h;
+}
+
+function onTransTypeChange() {
+  var type = document.getElementById('trans-type').value;
+  document.getElementById('trans-supplier-group').style.display = type === 'Nhập' ? 'block' : 'none';
+  if (type === 'Nhập') document.getElementById('trans-supplier').required = true;
+  else document.getElementById('trans-supplier').required = false;
+}
+
+function onTransProductChange() {
+  var sel = document.getElementById('trans-product');
+  var opt = sel.options[sel.selectedIndex];
+  if (opt && opt.value) {
+    var stock = opt.getAttribute('data-stock');
+    var unit = opt.getAttribute('data-unit');
+    document.getElementById('trans-stock-info').textContent = 'Tồn kho hiện tại: ' + stock + ' ' + unit;
+  } else {
+    document.getElementById('trans-stock-info').textContent = '';
+  }
+}
+
+function submitTransForm(e) {
+  e.preventDefault();
+  var d = { type: document.getElementById('trans-type').value, productId: document.getElementById('trans-product').value, quantity: document.getElementById('trans-qty').value, supplierId: document.getElementById('trans-supplier').value, note: document.getElementById('trans-note').value };
+  if (!d.type || !d.productId || !d.quantity) { showToast('Vui lòng điền đầy đủ thông tin', 'error'); return; }
+  if (d.type === 'Nhập' && !d.supplierId) { showToast('Vui lòng chọn nhà cung cấp khi nhập kho', 'error'); return; }
+  showLoading();
+  google.script.run.withSuccessHandler(function(r) {
+    hideLoading(); showToast(r.message, 'success');
+    document.getElementById('trans-form').reset();
+    document.getElementById('trans-stock-info').textContent = '';
+    document.getElementById('trans-supplier-group').style.display = 'none';
+    loadProducts(); // refresh cached stock
+    loadTransactions();
+  }).withFailureHandler(function(err) { hideLoading(); showToast(err.message, 'error'); }).createTransaction(d, currentUser.email);
+}
+
+// ==================== ALERTS ====================
+function loadAlerts() {
+  google.script.run.withSuccessHandler(function(list) {
+    var tb = document.getElementById('alerts-body');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="text-center text-muted">🎉 Tất cả sản phẩm đều đủ hàng!</td></tr>'; return; }
+    var h = '';
+    list.forEach(function(p) {
+      h += '<tr><td><code>' + esc(p.id) + '</code></td><td>' + esc(p.name) + '</td><td class="stock-critical">' + p.currentStock + ' ' + esc(p.unit) + '</td><td>' + p.minStock + ' ' + esc(p.unit) + '</td><td>' + esc(p.supplierName) + '</td><td>' + esc(p.supplierPhone) + '</td></tr>';
+    });
+    tb.innerHTML = h;
+  }).withFailureHandler(function(e) { showToast('Lỗi: ' + e.message, 'error'); }).getLowStockProducts(currentUser.email);
+}
+
+function sendAlert() {
+  if (!confirm('Gửi email cảnh báo tồn kho thấp đến các email trong danh sách AlertRecipients?')) return;
+  showLoading();
+  google.script.run.withSuccessHandler(function(r) { hideLoading(); showToast(r.message, r.success ? 'success' : 'error'); }).withFailureHandler(function(err) { hideLoading(); showToast(err.message, 'error'); }).sendLowStockAlert(currentUser.email);
+}
+
+// ==================== SUPPLIERS ====================
+function loadSuppliers() {
+  google.script.run.withSuccessHandler(function(list) {
+    cachedSuppliers = list;
+    var tb = document.getElementById('suppliers-body');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Chưa có NCC</td></tr>'; return; }
+    var h = '';
+    list.forEach(function(s) {
+      h += '<tr><td><code>' + esc(s.id) + '</code></td><td>' + esc(s.name) + '</td><td>' + esc(s.contact) + '</td><td>' + esc(s.phone) + '</td><td>' + esc(s.email) + '</td><td>' + esc(s.address) + '</td>';
+      h += '<td><button class="btn btn-sm btn-outline-info me-1" onclick="editSupplier(\'' + s.id + '\')"><i class="fas fa-edit"></i></button><button class="btn btn-sm btn-outline-danger" onclick="delSupplier(\'' + s.id + '\')"><i class="fas fa-trash"></i></button></td></tr>';
+    });
+    tb.innerHTML = h;
+  }).withFailureHandler(function(e) { showToast('Lỗi: ' + e.message, 'error'); }).getSuppliers(currentUser.email);
+}
+
+function showSupplierForm(data) {
+  document.getElementById('supplier-form').reset();
+  document.getElementById('s-id').value = '';
+  if (data) {
+    document.getElementById('supplier-modal-title').textContent = 'Sửa NCC';
+    document.getElementById('s-id').value = data.id;
+    document.getElementById('s-name').value = data.name;
+    document.getElementById('s-contact').value = data.contact;
+    document.getElementById('s-phone').value = data.phone;
+    document.getElementById('s-email').value = data.email;
+    document.getElementById('s-address').value = data.address;
+  } else {
+    document.getElementById('supplier-modal-title').textContent = 'Thêm NCC';
+  }
+  getModal('modal-supplier').show();
+}
+
+function editSupplier(id) {
+  var s = cachedSuppliers.find(function(x) { return x.id === id; });
+  if (s) showSupplierForm(s);
+}
+
+function submitSupplierForm(e) {
+  e.preventDefault();
+  showLoading();
+  var d = { id: document.getElementById('s-id').value, name: document.getElementById('s-name').value.trim(), contact: document.getElementById('s-contact').value.trim(), phone: document.getElementById('s-phone').value.trim(), email: document.getElementById('s-email').value.trim(), address: document.getElementById('s-address').value.trim() };
+  var fn = d.id ? 'updateSupplier' : 'addSupplier';
+  google.script.run.withSuccessHandler(function(r) { hideLoading(); getModal('modal-supplier').hide(); showToast(r.message, 'success'); loadSuppliers(); loadCategoriesAndSuppliers(); }).withFailureHandler(function(err) { hideLoading(); showToast(err.message, 'error'); })[fn](d, currentUser.email);
+}
+
+function delSupplier(id) {
+  if (!confirm('Xác nhận xóa NCC này?')) return;
+  showLoading();
+  google.script.run.withSuccessHandler(function(r) { hideLoading(); showToast(r.message, 'success'); loadSuppliers(); loadCategoriesAndSuppliers(); }).withFailureHandler(function(err) { hideLoading(); showToast(err.message, 'error'); }).deleteSupplier(id, currentUser.email);
+}
+
+// ==================== USERS ====================
+var cachedUsers = [];
+function loadUsers() {
+  google.script.run.withSuccessHandler(function(list) {
+    cachedUsers = list;
+    var tb = document.getElementById('users-body');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Chưa có user</td></tr>'; return; }
+    var h = '';
+    list.forEach(function(u) {
+      var roleBadge = '<span class="badge badge-role role-' + u.role + '">' + u.role + '</span>';
+      var statusBadge = u.active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-secondary">Inactive</span>';
+      h += '<tr><td><code>' + esc(u.userId) + '</code></td><td>' + esc(u.email) + '</td><td>' + esc(u.fullName) + '</td><td>' + roleBadge + '</td><td>' + statusBadge + '</td>';
+      h += '<td><button class="btn btn-sm btn-outline-info" onclick="editUser(\'' + u.userId + '\')"><i class="fas fa-edit"></i></button></td></tr>';
+    });
+    tb.innerHTML = h;
+  }).withFailureHandler(function(e) { showToast('Lỗi: ' + e.message, 'error'); }).getUsers(currentUser.email);
+}
+
+function showUserForm(data) {
+  document.getElementById('user-form').reset();
+  document.getElementById('u-id').value = '';
+  document.getElementById('u-password').value = '123456';
+  document.getElementById('u-email').disabled = false;
+  if (data) {
+    document.getElementById('user-modal-title').textContent = 'Sửa User';
+    document.getElementById('u-id').value = data.userId;
+    document.getElementById('u-email').value = data.email;
+    document.getElementById('u-email').disabled = true;
+    document.getElementById('u-fullname').value = data.fullName;
+    document.getElementById('u-role').value = data.role;
+    document.getElementById('u-active').value = data.active ? 'true' : 'false';
+  } else {
+    document.getElementById('user-modal-title').textContent = 'Thêm User';
+  }
+  getModal('modal-user').show();
+}
+
+function editUser(userId) {
+  var u = cachedUsers.find(function(x) { return x.userId === userId; });
+  if (u) showUserForm(u);
+}
+
+function submitUserForm(e) {
+  e.preventDefault();
+  showLoading();
+  var d = { userId: document.getElementById('u-id').value, email: document.getElementById('u-email').value.trim(), fullName: document.getElementById('u-fullname').value.trim(), password: document.getElementById('u-password').value, role: document.getElementById('u-role').value, active: document.getElementById('u-active').value === 'true' };
+  var fn = d.userId ? 'updateUser' : 'addUser';
+  google.script.run.withSuccessHandler(function(r) { hideLoading(); getModal('modal-user').hide(); showToast(r.message, 'success'); loadUsers(); }).withFailureHandler(function(err) { hideLoading(); showToast(err.message, 'error'); })[fn](d, currentUser.email);
+}
+</script>
